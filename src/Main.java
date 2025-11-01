@@ -39,13 +39,12 @@ public class Main {
                 BufferedReader reader = new BufferedReader(fileReader);
 
                 int totalLines = 0;
-                int longestLine = 0;
-                int shortestLine = Integer.MAX_VALUE;
+                int googlebotCount = 0;
+                int yandexbotCount = 0;
                 String line;
 
                 while ((line = reader.readLine()) != null) {
                     int length = line.length();
-
 
                     if (length > 1024) {
                         throw new LineTooLongException(
@@ -56,23 +55,37 @@ public class Main {
 
                     totalLines++;
 
-                    if (length > longestLine) {
-                        longestLine = length;
-                    }
+                    String[] quotes = line.split("\"");
+                    if (quotes.length >= 6) {
+                        String userAgent = quotes[quotes.length - 1].trim();
 
-                    if (length < shortestLine) {
-                        shortestLine = length;
+                        if (userAgent.startsWith(" ")) {
+                            userAgent = userAgent.substring(1);
+                        }
+
+                        String botName = extractBotName(userAgent);
+                        if ("Googlebot".equals(botName)) {
+                            googlebotCount++;
+                        } else if ("YandexBot".equals(botName)) {
+                            yandexbotCount++;
+                        }
                     }
                 }
 
                 reader.close();
                 fileReader.close();
 
+                if (totalLines > 0) {
+                    double googlebotPercentage = (double) googlebotCount / totalLines * 100;
+                    double yandexbotPercentage = (double) yandexbotCount / totalLines * 100;
 
-                System.out.println("Результаты:");
-                System.out.println("Общее количество строк: " + totalLines);
-                System.out.println("Длина самой длинной строки: " + longestLine);
-                System.out.println("Длина самой короткой строки: " + shortestLine);
+                    System.out.println("Результаты анализа:");
+                    System.out.println("Общее количество запросов: " + totalLines);
+                    System.out.println("Запросов от Googlebot: " + googlebotCount + " (" + String.format("%.2f", googlebotPercentage) + "%)");
+                    System.out.println("Запросов от YandexBot: " + yandexbotCount + " (" + String.format("%.2f", yandexbotPercentage) + "%)");
+                } else {
+                    System.out.println("Файл пуст");
+                }
 
             } catch (LineTooLongException e) {
                 System.out.println("ОШИБКА: " + e.getMessage());
@@ -86,5 +99,30 @@ public class Main {
         }
 
         scanner.close();
+    }
+
+    private static String extractBotName(String userAgent) {
+        try {
+            int startBracket = userAgent.indexOf('(');
+            int endBracket = userAgent.indexOf(')', startBracket);
+
+            if (startBracket != -1 && endBracket != -1) {
+                String firstBrackets = userAgent.substring(startBracket + 1, endBracket);
+
+                String[] parts = firstBrackets.split(";");
+                if (parts.length >= 2) {
+                    String fragment = parts[1].trim();
+
+                    int slashIndex = fragment.indexOf('/');
+                    if (slashIndex != -1) {
+                        String botName = fragment.substring(0, slashIndex).trim();
+                        return botName;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            //test, teststeseqe123231
+        }
+        return null;
     }
 }
